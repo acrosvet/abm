@@ -1,3 +1,10 @@
+using Agents #Agent based models
+using Plots #Simple plots
+using Random #Pseudorandom number generation
+using DrWatson #Utilities for working with dictionaries
+using InteractiveDynamics #Plot and animate ABMs
+using CairoMakie 
+
 # Define the agent --------------------
 mutable struct CalfAgent <: AbstractAgent
     id::Int
@@ -237,6 +244,23 @@ function treatment!(CalfAgent, calfModel)
     
     end
 
+    function carrierState!(CalfAgent, calfModel)
+ 
+        # Some calves enter a carrier state
+        if (CalfAgent.status == :RR || CalfAgent.status == :RS) && CalfAgent.treatment == :PT
+            if rand(calfModel.rng) < calfModel.res_carrier
+                CalfAgent.status = :CR
+            end
+        end
+    
+        if CalfAgent.status == :RS
+            if rand(calfModel.rng) < calfModel.sens_carrier
+                CalfAgent.status = :CS
+            end
+        end
+    end
+    
+
 function recover!(CalfAgent, calfModel)
     if (CalfAgent.inf_days_is ≥ 5*time_resolution && CalfAgent.status == :IS) && (rand(calfModel.rng) < calfModel.sponrec_is)
         CalfAgent.status = :RS
@@ -286,8 +310,6 @@ function mortality!(CalfAgent, calfModel)
 end
 
 function agent_step!(CalfAgent, calfModel)
-    update_bacteria!(BacterialAgent, bacterialModel)
-    bacteria_step!(BacterialAgent, bacterialModel)
     move_agent!(CalfAgent, calfModel, calfModel.timestep) #Move the agent in space
     treatment!(CalfAgent, calfModel) #Introduce treatment
     treatment_effect!(CalfAgent) #Effect of treatment on transmission.
@@ -308,7 +330,8 @@ function update_agent!(CalfAgent)
         CalfAgent.since_tx += 1*time_resolution
     end
 end
-    
+
+calfSim = initialiseModel()
 
 infected_sensitive(x) = count(i == :IS for i in x)
 susceptible(x) = count(i == :S for i in x)
@@ -332,3 +355,14 @@ adata = [(:status, infected_sensitive),
  (:treatment, post_treatment)]
 
 simRun, _ = run!(calfSim, agent_step!, model_step!, 100*time_resolution; adata)
+
+figure = Figure()
+ax = figure[1, 1] = Axis(figure; ylabel = "Number of calves")
+l1 = lines!(ax, simRun[:, dataname((:status, infected_sensitive))], color = :orange)
+l2 = lines!(ax, simRun[:, dataname((:status, susceptible))], color = :green)
+l3 = lines!(ax, simRun[:, dataname((:status, infected_resistant))], color = :red)
+l4 = lines!(ax, simRun[:, dataname((:status, recoveries_r))], color = :black)
+l5 = lines!(ax, simRun[:, dataname((:status, recoveries_s))], color = :grey)
+
+
+figure 
