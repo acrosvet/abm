@@ -1,4 +1,10 @@
-    #include("packages.jl")
+ using Agents #Agent based models
+using Plots #Simple plots
+using Random #Pseudorandom number generation
+using DrWatson #Utilities for working with dictionaries
+using InteractiveDynamics #Plot and animate ABMs
+using CairoMakie 
+
     ## Define the agents
     mutable struct BacterialAgent <: AbstractAgent
         id::Int64
